@@ -19,6 +19,14 @@ Array.prototype.insert = function ( index, item ) {
   var deltaArr = [];
   var apptArr = [];
 
+function splitTest() {
+  var array1 = [];
+  var string1 = "A, B, C, D";
+  Logger.log(array1);
+  array1 = string1.split(", ");
+  Logger.log(array1);
+}
+
 function buildTotals() {
   var arr = [];
   var monthsArr = [];
@@ -34,6 +42,9 @@ function buildTotals() {
   wholeArray = wholeArray.concat(BuildYearArray('February', 1, currYear, "curr"));
   wholeArray = wholeArray.concat(BuildYearArray('February', 1, prevYear, "prev"));
   wholeArray = wholeArray.concat(BuildDelta('February',1, currYear, prevYear));
+  wholeArray = wholeArray.concat(BuildYearArray('March', 2, currYear, "curr"));
+  wholeArray = wholeArray.concat(BuildYearArray('March', 2, prevYear, "prev"));
+  wholeArray = wholeArray.concat(BuildDelta('March',2 , currYear, prevYear));
   
   var _Rows = wholeArray.length;
   var _Cols = wholeArray[0].length;
@@ -75,7 +86,11 @@ function buildTotals() {
       _Year[0][0] = monthName + ' ' + yearCOE;
       _Year[0][1] = apptArr[0][9];      // Get Monthly Appointments for Month and put in array
       _Year[0][2] = apptArr[0][10];     // Get Monthly Contracts for Month and put in array
-      _Year[0][3] = parseFloat((apptArr[0][10] / apptArr[0][9]) * 100).toFixed(2);
+     if (apptArr[0][9] > 0) { 
+         _Year[0][3] = parseFloat((apptArr[0][10] / apptArr[0][9]) * 100).toFixed(2);
+     } else {
+         _Year[0][3] = 0;
+     }
    }  
    
      // Now get 2019 Transaction values from '2019 Transaction' sheet.
@@ -89,6 +104,7 @@ function buildTotals() {
     // Determine if COE date matches for month and year to scan for
     for (var i = 0; i < arr.length; i++) {
       var COEDate = new Date(arr[i][6]);      // [6] is COE Date
+      // Logger.log("COEDate: " + COEDate);
       if ((COEDate.getMonth() == monthNumber) && (COEDate.getYear() == yearCOE)) { 
          monArr.push(arr[i]);
          if (arr[i][3] == "LISTING") { monListingClosed += 1 }
@@ -123,22 +139,31 @@ function buildTotals() {
                
 function BuildDelta(monthName, monthNumber, currYear, prevYear)  {
   deltaArr = [];
-  
-  var summaryValues = monthlySummaryWS.getRange(4,1,monthlySummaryWS.getLastRow(),monthlySummaryWS.getLastColumn()).getValues();
-    
+  var prevArr = [];
+  var currArr = [];
+
+  var summaryValues = wholeArray;  
+   
   for (var x = 0; x < summaryValues.length; x++) {
-    var deltaDate = new Date(summaryValues[x][0]);
-    if ((deltaDate.getYear() == prevYear) && (deltaDate.getMonth()== monthNumber)) {
-      var prevArr = summaryValues[x];
+    var monDate = summaryValues[x][0].toString().trim();
+    //Logger.log("typeof mondate: " + typeof(monDate));
+    var parts = [];
+    parts = monDate.split(' ');
+    //Logger.log("Parts: " + parts[0] + '  '  +  parts[1]);
+    var mydate = new Date(parts[0] + "1, " + parts[1]); 
+    var deltaDate = new Date(mydate);
+    
+    if ((parts[1] === prevYear) && (parts[0] == monthName)) {
+       prevArr = summaryValues[x];
     }
-    if ((deltaDate.getYear() == currYear) && (deltaDate.getMonth() == monthNumber)) {
-      var currArr = summaryValues[x];
+    if ((parts[1] === currYear) && (parts[0] == monthName)) {
+       currArr = summaryValues[x];
     }
   }
   
   deltaArr.push([0,0]);   // make array 2 dimensions
-  
-  deltaArr[0][0] = "MOM Delta";
+    
+  deltaArr[0][0] = "MOM " + monthName + " Delta";
   deltaArr[0][1] = currArr[1] - prevArr[1];                  // Appointments Made
   deltaArr[0][2] = currArr[2] - prevArr[2];                  // Contracts
   deltaArr[0][3] = "";                                       // Conversion Rate
@@ -148,6 +173,7 @@ function BuildDelta(monthName, monthNumber, currYear, prevYear)  {
   deltaArr[0][7] = (currArr[7] - prevArr[7]).toFixed(2);     // GCI
   deltaArr[0][8] = (currArr[8] - prevArr[8]).toFixed(2);     // Robins Net
   deltaArr[0][9] = (currArr[9] - prevArr[9]).toFixed(2);     // TC Fee
+  //Logger.log("deltaArr :" + deltaArr[0]);
   
   return deltaArr;
 }
@@ -156,13 +182,16 @@ function formatSheet()  {
   var data = monthlySummaryWS.getDataRange();
  
   dataValues = data.getValues();
+  Logger.log("dataValues: " + dataValues);
   
-  for (i=1; i < data.getLastRow(); i++) {
+  for (i=3; i < data.getLastRow(); i++) {
     str = dataValues[i][0].toString()
-    if (str.indexOf("MOM Delta")>-1) {
+    if (str.indexOf("MOM")>-1) {
       monthlySummaryWS.getRange(i+1,1,1,10).setBackgroundRGB(152, 252, 152);
     }  else {
       monthlySummaryWS.getRange(i+1,1,1,10).setBackgroundRGB(255, 255, 255);
     } // if
   } // for
+  
+  
 }

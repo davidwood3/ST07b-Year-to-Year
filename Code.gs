@@ -5,67 +5,59 @@ function onOpen() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
   // create menu
-  var menu = [{name: "Totals By Source", functionName: "buildTotalsBySource"},
-              {name: "Subtoals By Month", functionName: "buildsubTotals"},
-              {name: "Format Data Entry Sheet", functionName: "formatDataEntered"},
-              {name: "Backup Spreadsheet on Demand", functionName: "makeCopy"}
+  var menu = [{name: "Build Year to Year Totals", functionName: "buildTotals"},
+              {name: "Format Monthly Transaction Summary", functionName: "formatMonthlyTransactionSummary"},
+              {name: "Backup Spreadsheet on Demand", functionName: "makeBackup"}
              ];
 
   // add to menu
   ss.addMenu("Smith Team", menu);  
 }
 
-function formatDataEntered() {
+function makeBackup() {
+
+  var timeZone = Session.getScriptTimeZone();
+
+  // generates the timestamp and stores in variable formattedDate as year-month-date hour-minute-second
+  var formattedDate = Utilities.formatDate(new Date(), timeZone , "yyyy-MM-dd' 'HH:mm:ss");
+    
+  // getting name of the original file and appending the word "copy" followed by the timestamp stored in formattedDate
+  var saveAs = SpreadsheetApp.getActiveSpreadsheet().getName() + " Copy " + formattedDate;
+  
+  // getting the destination folder by their ID
+  var destinationFolder = DriveApp.getFolderById("1RilTIR2PsIuMtH3lgvyh7itk9X_OGckl");
+  
+  DriveApp.getFileById(SpreadsheetApp.getActiveSpreadsheet().getId()).makeCopy(saveAs, destinationFolder);
+}
+
+function formatMonthlyTransactionSummary() {
   var ss = SpreadsheetApp.openByUrl(ssURL);
-  var dataEnteredSheet = ss.getSheetByName("DataEntered");
+  var monthSummary = ss.getSheetByName("2020 Monthly Summary");
   
-  var lr = dataEnteredSheet.getLastRow();
+  var lr = monthSummary.getLastRow();
   
-  // if month number is in column no need to run this script
-  if (dataEnteredSheet.getRange(lr,14).getValue() != "") {
-    Logger.log("Skipped");
-    return;
-  }
+  monthSummary.setColumnWidth(1,190);    // Month
+  monthSummary.setColumnWidth(2,90);     // Appointments Made     
+  monthSummary.setColumnWidth(3,90);     // Contracts
+  monthSummary.setColumnWidth(4,150);    // Conversion Rate
+  monthSummary.setColumnWidth(5,110);    // Listings Closed
+  monthSummary.setColumnWidth(6,110);    // Buyers Closed
+  monthSummary.setColumnWidth(7,150);    // Volume
+  monthSummary.setColumnWidth(8,150);    // GCI
+  monthSummary.setColumnWidth(9,150);    // Robins Net CI
+  monthSummary.setColumnWidth(10,150);   // Transaction Fee
   
-  dataEnteredSheet.getRange("N2").setFormula("=Month(G2)");
-  dataEnteredSheet.getRange("O2").setFormula('=ArrayFormula(text(date(2019,N2,1),"mmmm"))');
+  monthSummary.getRange('G:G').setNumberFormat("$#,##0.00;$(#,##0.00)");   // Volume
+  monthSummary.getRange('D:D').setNumberFormat('0.00');                    // Commission %
+  monthSummary.getRange('H:H').setNumberFormat("$#,##0.00;$(#,##0.00)");   // GCI
+  monthSummary.getRange('I:I').setNumberFormat("$#,##0.00;$(#,##0.00)");   // Robins Net CI
+  monthSummary.getRange('J:J').setNumberFormat("$#,##0.00;$(#,##0.00)");   // TC Fee
   
-
-  var fillDownRange1 = dataEnteredSheet.getRange(2,14 ,lr-1);
-  var fillDownRange2 = dataEnteredSheet.getRange(2,15 ,lr-1);
-  dataEnteredSheet.getRange("N2").copyTo(fillDownRange1);
-  dataEnteredSheet.getRange("O2").copyTo(fillDownRange2);
+  monthSummary.setFrozenRows(1);
+  monthSummary.setFrozenRows(2);
+  monthSummary.setFrozenRows(3);
   
-
-  // turn background color to light green if a subtotal.
-  dataEnteredSheet.getRange(1,1,1,dataEnteredSheet.getLastColumn()).setBackgroundRGB(0, 255, 255);
-  dataEnteredSheet.getRange(1,1,1,dataEnteredSheet.getLastColumn()).setFontWeight("bold");
   
-  dataEnteredSheet.setColumnWidth(1,190);    // Property
-  dataEnteredSheet.setColumnWidth(2,70);     // Street     
-  dataEnteredSheet.setColumnWidth(3,200);    // Source
-  dataEnteredSheet.setColumnWidth(4,150);    // Listing or Buyer
-  dataEnteredSheet.setColumnWidth(5,130);    // Agent
-  dataEnteredSheet.setColumnWidth(6,130);    // Contract Date
-  dataEnteredSheet.setColumnWidth(7,130);    // COE
-  dataEnteredSheet.setColumnWidth(8,140);    // Price
-  dataEnteredSheet.setColumnWidth(9,140);    // Commission %
-  dataEnteredSheet.setColumnWidth(10,110);   // Robins %
-  dataEnteredSheet.setColumnWidth(11,120);   // GCI
-  dataEnteredSheet.setColumnWidth(12,120);   // Robins Net CI
-  dataEnteredSheet.setColumnWidth(13,90);    // TC Fee
-  dataEnteredSheet.setColumnWidth(14,100);   // Month Name
   
-  dataEnteredSheet.getRange('H:H').setNumberFormat("$#,##0.00;$(#,##0.00)");   // Price
-  dataEnteredSheet.getRange('I:I').setNumberFormat('0.00');                    // Commission %
-  dataEnteredSheet.getRange('J:J').setNumberFormat('00');                      // Robins %
-  dataEnteredSheet.getRange('K:K').setNumberFormat("$#,##0.00;$(#,##0.00)");   // GCI
-  dataEnteredSheet.getRange('L:L').setNumberFormat("$#,##0.00;$(#,##0.00)");   // Robins Net CI
-  dataEnteredSheet.getRange('M:M').setNumberFormat("$#,##0.00;$(#,##0.00)");   // TC Fee
-  
-  //ScriptApp.newTrigger('onChange')
-  //    .forSpreadsheet(ss)
-  //    .onChange()
-  //    .create();
 }
 
